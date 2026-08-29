@@ -30,6 +30,7 @@ html, body {
   font-size: 14px;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: none;
+  overflow-x: hidden;
 }
 
 button, input {
@@ -233,6 +234,7 @@ button, input {
 .sheet-body {
   flex-grow: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 20px 16px;
   display: flex;
   flex-direction: column;
@@ -267,8 +269,9 @@ button, input {
 .segmented { display: flex; gap: 8px; }
 .segment {
   flex-grow: 1;
+  min-width: 0;
   text-align: center;
-  padding: 11px 0;
+  padding: 11px 4px;
   border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--surface2);
@@ -284,7 +287,7 @@ button, input {
 .segment.active.cc { background: var(--purple-dim); border-color: var(--purple); color: var(--purple); font-weight: 700; }
 
 .strike-row { display: flex; gap: 10px; }
-.strike-col { flex-grow: 1; display: flex; flex-direction: column; gap: 6px; }
+.strike-col { flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .strike-col .sub-label { font-size: 11px; color: var(--muted); }
 .width-hint { font-size: 12px; color: var(--muted); padding-top: 2px; }
 
