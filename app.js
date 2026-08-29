@@ -392,7 +392,19 @@
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('service-worker.js').catch(() => {});
+      navigator.serviceWorker.register('service-worker.js')
+        .then((reg) => reg.update()) // force a check for a new version on every launch
+        .catch(() => {});
+    });
+
+    // When a new service worker takes over (a real update, not first
+    // install), reload once so the page picks up the new version right
+    // away instead of needing a second manual relaunch.
+    let refreshedOnce = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (refreshedOnce) return;
+      refreshedOnce = true;
+      window.location.reload();
     });
   }
 })();

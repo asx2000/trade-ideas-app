@@ -1,4 +1,9 @@
-const CACHE_NAME = 'trade-ideas-v1';
+// Bump this whenever this file itself changes (e.g. the ASSETS list, or the
+// caching strategy below) -- it's what makes the browser notice the update.
+// Ordinary app updates (index.html/app.js/style.css) don't need a bump: the
+// network-first fetch handler below always prefers the network when online.
+const CACHE_NAME = 'trade-ideas-v2';
+
 const ASSETS = [
   './',
   './index.html',
@@ -26,21 +31,22 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// Network-first: always try to get the latest version when online, so app
+// updates show up on the very next launch instead of lagging a version
+// behind. Only fall back to the cached copy when the network fetch fails
+// (offline), so the app still works with no connection.
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const network = fetch(event.request)
-        .then((response) => {
-          if (response && response.ok) {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-          }
-          return response;
-        })
-        .catch(() => cached);
-      return cached || network;
-    })
+    fetch(event.request)
+      .then((response) => {
+        if (response && response.ok) {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        }
+        return response;
+      })
+      .catch(() => caches.match(event.request))
   );
 });
