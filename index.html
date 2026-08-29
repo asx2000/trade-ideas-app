@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<title>Trade Ideas</title>
+<meta name="theme-color" content="#0d1117">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Trade Ideas">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- Header -->
+  <div class="header">
+    <button id="addBtn" class="icon-btn" aria-label="Add trade idea">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+      </svg>
+    </button>
+    <div class="header-titles">
+      <div class="title">Session Plan</div>
+      <div class="subtitle" id="subtitleDate">Debit Spreads</div>
+    </div>
+    <div class="count-badge" id="countBadge">0 QUEUED</div>
+  </div>
+
+  <!-- List / empty state -->
+  <div class="list" id="list" hidden></div>
+
+  <div class="empty-state" id="emptyState">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 18 L9 12 L13 15 L20 6"></path>
+      <path d="M15 6 L20 6 L20 11"></path>
+    </svg>
+    <div class="empty-title">No trade ideas queued</div>
+    <div class="empty-sub">Tap the + button to load a setup<br>so it's ready before the open.</div>
+  </div>
+
+  <!-- Add / edit sheet -->
+  <div id="overlay" class="overlay"></div>
+  <div id="sheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div class="sheet-header">
+      <div class="title" id="sheetTitle">New Trade Idea</div>
+      <button id="closeBtn" class="icon-btn" style="width:36px;height:36px;border-radius:9px;color:var(--muted);" aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <line x1="5" y1="5" x2="19" y2="19"></line>
+          <line x1="19" y1="5" x2="5" y2="19"></line>
+        </svg>
+      </button>
+    </div>
+
+    <form id="tradeForm" novalidate>
+      <div class="sheet-body">
+
+        <div class="field">
+          <div class="field-label">Ticker</div>
+          <input class="input ticker" id="ticker" type="text" placeholder="e.g. NVDA" maxlength="6" autocomplete="off" autocapitalize="characters" inputmode="text">
+        </div>
+
+        <div class="field">
+          <div class="field-label">Spread Type</div>
+          <div class="segmented">
+            <div class="segment call" id="segCall" data-type="call">Call Spread</div>
+            <div class="segment put" id="segPut" data-type="put">Put Spread</div>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="field-label">Expiration</div>
+          <div class="input" style="display:flex; align-items:center; justify-content:space-between; padding-right: 10px;">
+            <input id="expiration" type="date" style="border:none; background:transparent; color:var(--text); font-size:16px; padding:0; width: 100%;">
+            <span id="dteHint" style="color:var(--muted); font-size:13px; white-space:nowrap; padding-left:8px;"></span>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="field-label">Strikes</div>
+          <div class="strike-row">
+            <div class="strike-col">
+              <div class="sub-label">Long Strike</div>
+              <input class="input" id="longStrike" type="number" inputmode="decimal" step="0.5" placeholder="0">
+            </div>
+            <div class="strike-col">
+              <div class="sub-label">Short Strike</div>
+              <input class="input" id="shortStrike" type="number" inputmode="decimal" step="0.5" placeholder="0">
+            </div>
+          </div>
+          <div class="width-hint" id="widthHint">&nbsp;</div>
+        </div>
+
+        <div class="field">
+          <div class="field-label">Ideal Premium (Debit)</div>
+          <div class="input debit-prefix">
+            <span class="dollar">$</span>
+            <input id="targetDebit" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00" style="border:none; background:transparent; color:inherit; font:inherit; padding:0; width:100%;">
+          </div>
+        </div>
+
+        <div class="error-text" id="formError"></div>
+      </div>
+
+      <div class="sheet-footer">
+        <button type="submit" class="btn btn-save" id="saveBtn">Save Trade Idea</button>
+        <button type="button" class="btn btn-delete" id="deleteBtn" hidden>Delete Trade Idea</button>
+      </div>
+    </form>
+  </div>
+
+</div>
+<script src="app.js"></script>
+</body>
+</html>
