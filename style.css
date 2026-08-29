@@ -220,6 +220,11 @@ button, input {
 }
 .sheet.open { transform: translateY(0); }
 
+/* The form itself sits between .sheet (the flex container) and
+   .sheet-body (the flex item that needs to shrink to fit and scroll)
+   -- take it out of layout so .sheet-body is the direct flex child. */
+#tradeForm { display: contents; }
+
 .sheet-header {
   flex-shrink: 0;
   background: var(--surface);
@@ -233,8 +238,10 @@ button, input {
 
 .sheet-body {
   flex-grow: 1;
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
   padding: 20px 16px;
   display: flex;
   flex-direction: column;
