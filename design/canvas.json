@@ -1,0 +1,10 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 390, "h": 844, "title": "Session Plan" },
+    { "file": "AddTrade.dc.html", "x": 470, "y": 0, "w": 390, "h": 844, "title": "Add Trade" }
+  ],
+  "annotations": [
+    { "id": "brief-note", "x": 0, "y": -80, "w": 500, "text": "Debit Spread Session Plan — PWA mockup, dark theme matched to Trading Dashboard.html" }
+  ],
+  "launch": { "view": "canvas" }
+}
