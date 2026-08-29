@@ -61,11 +61,20 @@
       <div class="sheet-body">
 
         <div class="field">
+          <div class="field-label">Strategy</div>
+          <div class="segmented">
+            <div class="segment ds" id="segStratDS" data-strategy="debit_spread">Debit Spread</div>
+            <div class="segment csp" id="segStratCSP" data-strategy="csp">CSP</div>
+            <div class="segment cc" id="segStratCC" data-strategy="cc">CC</div>
+          </div>
+        </div>
+
+        <div class="field">
           <div class="field-label">Ticker</div>
           <input class="input ticker" id="ticker" type="text" placeholder="e.g. NVDA" maxlength="6" autocomplete="off" autocapitalize="characters" inputmode="text">
         </div>
 
-        <div class="field">
+        <div class="field" id="dsTypeField">
           <div class="field-label">Spread Type</div>
           <div class="segmented">
             <div class="segment call" id="segCall" data-type="call">Call Spread</div>
@@ -81,7 +90,7 @@
           </div>
         </div>
 
-        <div class="field">
+        <div class="field" id="dsStrikesField">
           <div class="field-label">Strikes</div>
           <div class="strike-row">
             <div class="strike-col">
@@ -96,20 +105,25 @@
           <div class="width-hint" id="widthHint">&nbsp;</div>
         </div>
 
+        <div class="field" id="singleStrikeField" hidden>
+          <div class="field-label" id="singleStrikeLabel">Strike</div>
+          <input class="input" id="strike" type="number" inputmode="decimal" step="0.5" placeholder="0">
+        </div>
+
         <div class="field">
-          <div class="field-label">Ideal Premium (Debit)</div>
+          <div class="field-label" id="premiumLabel">Ideal Premium (Debit)</div>
           <div class="input debit-prefix">
             <span class="dollar">$</span>
-            <input id="targetDebit" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00" style="border:none; background:transparent; color:inherit; font:inherit; padding:0; width:100%;">
+            <input id="premium" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00" style="border:none; background:transparent; color:inherit; font:inherit; padding:0; width:100%;">
           </div>
         </div>
 
         <div class="error-text" id="formError"></div>
-      </div>
 
-      <div class="sheet-footer">
-        <button type="submit" class="btn btn-save" id="saveBtn">Save Trade Idea</button>
-        <button type="button" class="btn btn-delete" id="deleteBtn" hidden>Delete Trade Idea</button>
+        <div class="sheet-footer">
+          <button type="submit" class="btn btn-save" id="saveBtn">Save Trade Idea</button>
+          <button type="button" class="btn btn-delete" id="deleteBtn" hidden>Delete Trade Idea</button>
+        </div>
       </div>
     </form>
   </div>

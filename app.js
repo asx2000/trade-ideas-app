@@ -3,6 +3,12 @@
 
   const STORAGE_KEY = 'tradeIdeas.debitSpreads.v1';
 
+  const STRATEGIES = {
+    debit_spread: { label: 'Debit Spread', pillClass: null /* uses call/put */ },
+    csp: { label: 'Cash Secured Put', pillClass: 'csp', pillText: 'CASH SECURED PUT' },
+    cc: { label: 'Covered Call', pillClass: 'cc', pillText: 'COVERED CALL' },
+  };
+
   const list = document.getElementById('list');
   const emptyState = document.getElementById('emptyState');
   const countBadge = document.getElementById('countBadge');
@@ -15,20 +21,36 @@
   const formError = document.getElementById('formError');
 
   const tickerInput = document.getElementById('ticker');
+
+  const segStratDS = document.getElementById('segStratDS');
+  const segStratCSP = document.getElementById('segStratCSP');
+  const segStratCC = document.getElementById('segStratCC');
+  const dsTypeField = document.getElementById('dsTypeField');
   const segCall = document.getElementById('segCall');
   const segPut = document.getElementById('segPut');
+
   const expirationInput = document.getElementById('expiration');
   const dteHint = document.getElementById('dteHint');
+
+  const dsStrikesField = document.getElementById('dsStrikesField');
   const longStrikeInput = document.getElementById('longStrike');
   const shortStrikeInput = document.getElementById('shortStrike');
   const widthHint = document.getElementById('widthHint');
-  const targetDebitInput = document.getElementById('targetDebit');
+
+  const singleStrikeField = document.getElementById('singleStrikeField');
+  const singleStrikeLabel = document.getElementById('singleStrikeLabel');
+  const strikeInput = document.getElementById('strike');
+
+  const premiumLabel = document.getElementById('premiumLabel');
+  const premiumInput = document.getElementById('premium');
+
   const saveBtn = document.getElementById('saveBtn');
   const deleteBtn = document.getElementById('deleteBtn');
 
   let trades = load();
   let editingId = null;
-  let currentType = 'call';
+  let currentStrategy = 'debit_spread';
+  let currentType = 'call'; // debit spread only: call | put
 
   // ---------- storage ----------
 
@@ -36,7 +58,9 @@
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       const parsed = raw ? JSON.parse(raw) : [];
-      return Array.isArray(parsed) ? parsed : [];
+      if (!Array.isArray(parsed)) return [];
+      // Legacy records (pre-CSP/CC) have no `strategy` field.
+      return parsed.map((t) => (t.strategy ? t : { ...t, strategy: 'debit_spread' }));
     } catch (e) {
       return [];
     }
@@ -80,9 +104,9 @@
 
   function render() {
     subtitleDate.textContent =
-      'Debit Spreads · ' + new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      'Debit Spreads · Wheel · ' + new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 
-    countBadge.textContent = trades.length + (trades.length === 1 ? ' QUEUED' : ' QUEUED');
+    countBadge.textContent = trades.length + ' QUEUED';
 
     if (trades.length === 0) {
       list.hidden = true;
@@ -106,13 +130,42 @@
   function cardHTML(t) {
     const dte = computeDTE(t.expiration);
     const expired = dte < 0;
-    const width = Math.abs(t.longStrike - t.shortStrike);
-    const widthStr = Number.isInteger(width) ? width : width.toFixed(1);
-    const pillClass = t.spreadType === 'call' ? 'call' : 'put';
-    const pillLabel = t.spreadType === 'call' ? 'CALL SPREAD' : 'PUT SPREAD';
     const bottomLabel = expired
       ? 'Expired ' + formatDate(t.expiration)
       : 'Exp ' + formatDate(t.expiration) + ' · ' + dte + ' DTE';
+
+    let pillClass, pillLabel, midHTML, premiumLabelText;
+
+    if (t.strategy === 'csp' || t.strategy === 'cc') {
+      pillClass = STRATEGIES[t.strategy].pillClass;
+      pillLabel = STRATEGIES[t.strategy].pillText;
+      premiumLabelText = 'Target Premium';
+      midHTML = `
+        <div class="col-left">
+          <div class="field-label">Strike</div>
+          <div class="card-value">${fmtStrike(t.strike)}</div>
+        </div>
+        <div class="col-right">
+          <div class="field-label">${premiumLabelText}</div>
+          <div class="card-value premium">$${Number(t.targetPremium).toFixed(2)}</div>
+        </div>
+      `;
+    } else {
+      const width = Math.abs(t.longStrike - t.shortStrike);
+      const widthStr = Number.isInteger(width) ? width : width.toFixed(1);
+      pillClass = t.spreadType === 'call' ? 'call' : 'put';
+      pillLabel = t.spreadType === 'call' ? 'CALL SPREAD' : 'PUT SPREAD';
+      midHTML = `
+        <div class="col-left">
+          <div class="field-label">Strikes</div>
+          <div class="card-value">${fmtStrike(t.longStrike)} / ${fmtStrike(t.shortStrike)} <span class="dim">· $${widthStr} wide</span></div>
+        </div>
+        <div class="col-right">
+          <div class="field-label">Target Debit</div>
+          <div class="card-value premium">$${Number(t.targetDebit).toFixed(2)}</div>
+        </div>
+      `;
+    }
 
     return `
       <div class="card" data-id="${escapeAttr(t.id)}">
@@ -120,23 +173,14 @@
           <div class="card-ticker">${escapeHTML(t.ticker)}</div>
           <div class="pill ${pillClass}">${pillLabel}</div>
         </div>
-        <div class="card-mid">
-          <div class="col-left">
-            <div class="field-label">Strikes</div>
-            <div class="card-value">${fmtStrike(t.longStrike)} / ${fmtStrike(t.shortStrike)} <span class="dim">· $${widthStr} wide</span></div>
-          </div>
-          <div class="col-right">
-            <div class="field-label">Target Debit</div>
-            <div class="card-value debit">$${Number(t.targetDebit).toFixed(2)}</div>
-          </div>
-        </div>
+        <div class="card-mid">${midHTML}</div>
         <div class="card-bottom${expired ? ' expired' : ''}">${bottomLabel}</div>
       </div>
     `;
   }
 
   function fmtStrike(n) {
-    return Number.isInteger(n) ? String(n) : String(n);
+    return String(n);
   }
 
   function escapeHTML(s) {
@@ -150,12 +194,44 @@
 
   // ---------- form ----------
 
+  function setStrategy(strategy) {
+    currentStrategy = strategy;
+
+    segStratDS.classList.toggle('active', strategy === 'debit_spread');
+    segStratCSP.classList.toggle('active', strategy === 'csp');
+    segStratCC.classList.toggle('active', strategy === 'cc');
+
+    const isSpread = strategy === 'debit_spread';
+    dsTypeField.hidden = !isSpread;
+    dsStrikesField.hidden = !isSpread;
+    singleStrikeField.hidden = isSpread;
+
+    if (strategy === 'csp') {
+      singleStrikeLabel.textContent = 'Strike (Put)';
+    } else if (strategy === 'cc') {
+      singleStrikeLabel.textContent = 'Strike (Call)';
+    }
+
+    premiumLabel.textContent = isSpread ? 'Ideal Premium (Debit)' : 'Target Premium (Credit)';
+
+    updateSaveButtonStyle();
+  }
+
+  function updateSaveButtonStyle() {
+    saveBtn.classList.remove('put', 'csp', 'cc');
+    if (currentStrategy === 'debit_spread') {
+      saveBtn.classList.toggle('put', currentType === 'put');
+    } else {
+      saveBtn.classList.add(currentStrategy);
+    }
+    saveBtn.textContent = editingId ? 'Save Changes' : 'Save Trade Idea';
+  }
+
   function setType(type) {
     currentType = type;
     segCall.classList.toggle('active', type === 'call');
     segPut.classList.toggle('active', type === 'put');
-    saveBtn.classList.toggle('put', type === 'put');
-    saveBtn.textContent = deleteBtn.hidden ? 'Save Trade Idea' : 'Save Changes';
+    updateSaveButtonStyle();
   }
 
   function updateWidthHint() {
@@ -189,19 +265,29 @@
       sheetTitle.textContent = 'Edit Trade Idea';
       tickerInput.value = t.ticker;
       expirationInput.value = t.expiration;
-      longStrikeInput.value = t.longStrike;
-      shortStrikeInput.value = t.shortStrike;
-      targetDebitInput.value = t.targetDebit;
-      setType(t.spreadType);
+
+      setStrategy(t.strategy);
+
+      if (t.strategy === 'debit_spread') {
+        longStrikeInput.value = t.longStrike;
+        shortStrikeInput.value = t.shortStrike;
+        premiumInput.value = t.targetDebit;
+        setType(t.spreadType);
+      } else {
+        strikeInput.value = t.strike;
+        premiumInput.value = t.targetPremium;
+      }
+
       deleteBtn.hidden = false;
     } else {
       editingId = null;
       sheetTitle.textContent = 'New Trade Idea';
+      setStrategy('debit_spread');
       setType('call');
       deleteBtn.hidden = true;
     }
 
-    saveBtn.textContent = editingId ? 'Save Changes' : 'Save Trade Idea';
+    updateSaveButtonStyle();
     updateWidthHint();
     updateDteHint();
 
@@ -224,28 +310,39 @@
 
     const ticker = tickerInput.value.trim().toUpperCase();
     const expiration = expirationInput.value;
-    const longStrike = parseFloat(longStrikeInput.value);
-    const shortStrike = parseFloat(shortStrikeInput.value);
-    const targetDebit = parseFloat(targetDebitInput.value);
+    const premium = parseFloat(premiumInput.value);
 
     if (!ticker) return showError('Enter a ticker.');
     if (!expiration) return showError('Pick an expiration date.');
-    if (isNaN(longStrike) || isNaN(shortStrike)) return showError('Enter both strikes.');
-    if (longStrike === shortStrike) return showError('Long and short strikes must differ.');
-    if (isNaN(targetDebit) || targetDebit <= 0) return showError('Enter a target debit above 0.');
+    if (isNaN(premium) || premium <= 0) {
+      return showError(currentStrategy === 'debit_spread' ? 'Enter a target debit above 0.' : 'Enter a target premium above 0.');
+    }
 
-    const trade = {
+    let trade = {
       id: editingId || uid(),
+      strategy: currentStrategy,
       ticker,
-      spreadType: currentType,
       expiration,
-      longStrike,
-      shortStrike,
-      targetDebit,
       createdAt: editingId
         ? (trades.find((t) => t.id === editingId) || {}).createdAt || Date.now()
         : Date.now(),
     };
+
+    if (currentStrategy === 'debit_spread') {
+      const longStrike = parseFloat(longStrikeInput.value);
+      const shortStrike = parseFloat(shortStrikeInput.value);
+      if (isNaN(longStrike) || isNaN(shortStrike)) return showError('Enter both strikes.');
+      if (longStrike === shortStrike) return showError('Long and short strikes must differ.');
+      trade.spreadType = currentType;
+      trade.longStrike = longStrike;
+      trade.shortStrike = shortStrike;
+      trade.targetDebit = premium;
+    } else {
+      const strike = parseFloat(strikeInput.value);
+      if (isNaN(strike)) return showError('Enter a strike.');
+      trade.strike = strike;
+      trade.targetPremium = premium;
+    }
 
     if (editingId) {
       trades = trades.map((t) => (t.id === editingId ? trade : t));
@@ -276,6 +373,11 @@
   document.getElementById('addBtn').addEventListener('click', () => openForm(null));
   document.getElementById('closeBtn').addEventListener('click', closeForm);
   overlay.addEventListener('click', closeForm);
+
+  segStratDS.addEventListener('click', () => setStrategy('debit_spread'));
+  segStratCSP.addEventListener('click', () => setStrategy('csp'));
+  segStratCC.addEventListener('click', () => setStrategy('cc'));
+
   segCall.addEventListener('click', () => setType('call'));
   segPut.addEventListener('click', () => setType('put'));
   longStrikeInput.addEventListener('input', updateWidthHint);

@@ -10,6 +10,10 @@
   --red: #f85149;
   --red-dim: #6e1b19;
   --blue: #58a6ff;
+  --purple: #bc8cff;
+  --purple-dim: #3b2467;
+  --teal: #39d0d8;
+  --teal-dim: #114a4d;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
@@ -135,6 +139,8 @@ button, input {
 }
 .pill.call { color: var(--green); background: var(--green-dim); }
 .pill.put { color: var(--red); background: var(--red-dim); }
+.pill.csp { color: var(--teal); background: var(--teal-dim); }
+.pill.cc { color: var(--purple); background: var(--purple-dim); }
 
 .card-mid {
   display: flex;
@@ -150,7 +156,7 @@ button, input {
 }
 .card-value { font-size: 15px; font-weight: 600; }
 .card-value .dim { color: var(--muted); font-weight: 500; }
-.card-value.debit { font-weight: 700; color: var(--blue); }
+.card-value.premium { font-weight: 700; color: var(--blue); }
 .col-right { display: flex; flex-direction: column; gap: 2px; align-items: flex-end; }
 .col-left { display: flex; flex-direction: column; gap: 2px; }
 
@@ -273,6 +279,9 @@ button, input {
 }
 .segment.active.call { background: var(--green-dim); border-color: var(--green); color: var(--green); font-weight: 700; }
 .segment.active.put { background: var(--red-dim); border-color: var(--red); color: var(--red); font-weight: 700; }
+.segment.active.ds { background: var(--surface); border-color: var(--blue); color: var(--blue); font-weight: 700; }
+.segment.active.csp { background: var(--teal-dim); border-color: var(--teal); color: var(--teal); font-weight: 700; }
+.segment.active.cc { background: var(--purple-dim); border-color: var(--purple); color: var(--purple); font-weight: 700; }
 
 .strike-row { display: flex; gap: 10px; }
 .strike-col { flex-grow: 1; display: flex; flex-direction: column; gap: 6px; }
@@ -282,9 +291,12 @@ button, input {
 .debit-prefix { display: flex; align-items: center; gap: 4px; }
 .debit-prefix span.dollar { color: var(--muted); font-weight: 500; font-size: 16px; }
 
+/* Lives inside the scrollable .sheet-body (not fixed) so it's always
+   reachable by scrolling, even when the iOS keyboard covers the lower
+   part of the screen. */
 .sheet-footer {
-  flex-shrink: 0;
-  padding: 14px 16px calc(20px + var(--safe-bottom));
+  margin: 4px -16px calc(-20px + var(--safe-bottom)) -16px;
+  padding: 16px 16px calc(20px + var(--safe-bottom));
   border-top: 1px solid var(--border);
   background: var(--surface);
   display: flex;
@@ -304,6 +316,8 @@ button, input {
 }
 .btn-save { background: var(--green); color: #06240d; }
 .btn-save.put { background: var(--red); color: #2b0705; }
+.btn-save.csp { background: var(--teal); color: #04211f; }
+.btn-save.cc { background: var(--purple); color: #221238; }
 .btn-delete { background: transparent; color: var(--red); border: 1px solid var(--red-dim); }
 
 .error-text {
