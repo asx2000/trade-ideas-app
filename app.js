@@ -46,6 +46,8 @@
 
   const saveBtn = document.getElementById('saveBtn');
   const deleteBtn = document.getElementById('deleteBtn');
+  const shareBtn = document.getElementById('shareBtn');
+  const toast = document.getElementById('toast');
 
   let trades = load();
   let editingId = null;
@@ -368,6 +370,92 @@
     closeForm();
   }
 
+  // ---------- export / share ----------
+
+  function buildMarkdown() {
+    const exportedOn = new Date().toLocaleDateString('en-US', {
+      weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
+    });
+
+    let md = `# Session Plan\n_Exported ${exportedOn}_\n`;
+
+    if (trades.length === 0) {
+      return md + '\nNo trade ideas queued.\n';
+    }
+
+    const byStrategy = (s) => trades.filter((t) => t.strategy === s).sort((a, b) => a.expiration.localeCompare(b.expiration));
+    const ds = byStrategy('debit_spread');
+    const csp = byStrategy('csp');
+    const cc = byStrategy('cc');
+
+    if (ds.length) {
+      md += '\n## Debit Spreads\n\n';
+      md += '| Ticker | Type | Strikes | Width | Expiration | DTE | Target Debit |\n';
+      md += '|---|---|---|---|---|---|---|\n';
+      ds.forEach((t) => {
+        const width = Math.abs(t.longStrike - t.shortStrike);
+        const widthStr = Number.isInteger(width) ? width : width.toFixed(1);
+        const typeLabel = t.spreadType === 'call' ? 'Call Spread' : 'Put Spread';
+        md += `| ${t.ticker} | ${typeLabel} | ${fmtStrike(t.longStrike)} / ${fmtStrike(t.shortStrike)} | $${widthStr} | ${formatDate(t.expiration)} | ${computeDTE(t.expiration)} | $${Number(t.targetDebit).toFixed(2)} |\n`;
+      });
+    }
+
+    if (csp.length) {
+      md += '\n## Cash Secured Puts\n\n';
+      md += '| Ticker | Strike | Expiration | DTE | Target Premium |\n';
+      md += '|---|---|---|---|---|\n';
+      csp.forEach((t) => {
+        md += `| ${t.ticker} | ${fmtStrike(t.strike)} | ${formatDate(t.expiration)} | ${computeDTE(t.expiration)} | $${Number(t.targetPremium).toFixed(2)} |\n`;
+      });
+    }
+
+    if (cc.length) {
+      md += '\n## Covered Calls\n\n';
+      md += '| Ticker | Strike | Expiration | DTE | Target Premium |\n';
+      md += '|---|---|---|---|---|\n';
+      cc.forEach((t) => {
+        md += `| ${t.ticker} | ${fmtStrike(t.strike)} | ${formatDate(t.expiration)} | ${computeDTE(t.expiration)} | $${Number(t.targetPremium).toFixed(2)} |\n`;
+      });
+    }
+
+    return md;
+  }
+
+  let toastTimer = null;
+  function flashToast(msg) {
+    toast.textContent = msg;
+    toast.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { toast.hidden = true; }, 2200);
+  }
+
+  async function handleShare() {
+    const markdown = buildMarkdown();
+    const filename = `session-plan-${new Date().toISOString().slice(0, 10)}.md`;
+
+    if (navigator.share) {
+      try {
+        const file = new File([markdown], filename, { type: 'text/markdown' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: 'Session Plan' });
+          return;
+        }
+        await navigator.share({ title: 'Session Plan', text: markdown });
+        return;
+      } catch (e) {
+        if (e && e.name === 'AbortError') return; // user dismissed the share sheet
+        // fall through to clipboard fallback below
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(markdown);
+      flashToast('Copied to clipboard');
+    } catch (e) {
+      flashToast('Could not share');
+    }
+  }
+
   // ---------- wire up ----------
 
   document.getElementById('addBtn').addEventListener('click', () => openForm(null));
@@ -385,6 +473,7 @@
   expirationInput.addEventListener('change', updateDteHint);
   tradeForm.addEventListener('submit', handleSubmit);
   deleteBtn.addEventListener('click', handleDelete);
+  shareBtn.addEventListener('click', handleShare);
 
   render();
 
