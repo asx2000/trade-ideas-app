@@ -336,6 +336,79 @@ button, input {
   min-height: 14px;
 }
 
+/* ---------- Export sheet ---------- */
+
+.export-list { display: flex; flex-direction: column; gap: 8px; }
+
+.export-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.export-row:active { background: var(--border); }
+.export-row-label { flex-grow: 1; min-width: 0; }
+
+.export-row-count {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 3px 9px;
+  flex-shrink: 0;
+}
+
+/* The tick box: outline only until the row is selected. */
+.export-check {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: transparent;
+}
+.export-row.selected .export-check { color: inherit; }
+
+.export-row.selected { color: var(--text); }
+.export-row.selected.ds { border-color: var(--blue); background: var(--surface); }
+.export-row.selected.ds .export-check { border-color: var(--blue); color: var(--blue); }
+.export-row.selected.csp { border-color: var(--teal); background: var(--teal-dim); }
+.export-row.selected.csp .export-check { border-color: var(--teal); color: var(--teal); }
+.export-row.selected.cc { border-color: var(--purple); background: var(--purple-dim); }
+.export-row.selected.cc .export-check { border-color: var(--purple); color: var(--purple); }
+
+.export-row:disabled { opacity: 0.4; cursor: default; }
+
+.export-actions { display: flex; gap: 16px; padding-top: 2px; }
+
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--blue);
+  cursor: pointer;
+}
+.link-btn:disabled { color: var(--muted); cursor: default; }
+
+.btn-save:disabled { background: var(--surface2); color: var(--muted); cursor: default; }
+
 /* ---------- Toast ---------- */
 
 .toast {

@@ -2,11 +2,24 @@
   'use strict';
 
   const STORAGE_KEY = 'tradeIdeas.debitSpreads.v1';
+  const EXPORT_KEY = 'tradeIdeas.exportStrategies.v1';
+
+  // Order the export sheet rows / markdown sections follow.
+  const STRATEGY_ORDER = ['debit_spread', 'csp', 'cc'];
 
   const STRATEGIES = {
-    debit_spread: { label: 'Debit Spread', pillClass: null /* uses call/put */ },
-    csp: { label: 'Cash Secured Put', pillClass: 'csp', pillText: 'CASH SECURED PUT' },
-    cc: { label: 'Covered Call', pillClass: 'cc', pillText: 'COVERED CALL' },
+    debit_spread: {
+      label: 'Debit Spread', pillClass: null /* uses call/put */,
+      heading: 'Debit Spreads', slug: 'debit-spreads',
+    },
+    csp: {
+      label: 'Cash Secured Put', pillClass: 'csp', pillText: 'CASH SECURED PUT',
+      heading: 'Cash Secured Puts', slug: 'cash-secured-puts',
+    },
+    cc: {
+      label: 'Covered Call', pillClass: 'cc', pillText: 'COVERED CALL',
+      heading: 'Covered Calls', slug: 'covered-calls',
+    },
   };
 
   const list = document.getElementById('list');
@@ -49,7 +62,15 @@
   const shareBtn = document.getElementById('shareBtn');
   const toast = document.getElementById('toast');
 
+  const exportSheet = document.getElementById('exportSheet');
+  const exportList = document.getElementById('exportList');
+  const exportRows = Array.from(exportList.querySelectorAll('[data-strategy]'));
+  const exportConfirmBtn = document.getElementById('exportConfirmBtn');
+  const exportSelectAll = document.getElementById('exportSelectAll');
+  const exportSelectNone = document.getElementById('exportSelectNone');
+
   let trades = load();
+  let exportSelection = loadExportSelection();
   let editingId = null;
   let currentStrategy = 'debit_spread';
   let currentType = 'call'; // debit spread only: call | put
@@ -70,6 +91,28 @@
 
   function persist() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(trades));
+  }
+
+  // Which strategies the last export included, so the choice sticks between
+  // sessions. Defaults to everything, matching the old export-all behaviour.
+  function loadExportSelection() {
+    try {
+      const raw = localStorage.getItem(EXPORT_KEY);
+      const parsed = raw ? JSON.parse(raw) : null;
+      if (!Array.isArray(parsed)) return [...STRATEGY_ORDER];
+      const valid = parsed.filter((s) => STRATEGY_ORDER.includes(s));
+      return valid.length ? valid : [...STRATEGY_ORDER];
+    } catch (e) {
+      return [...STRATEGY_ORDER];
+    }
+  }
+
+  function persistExportSelection() {
+    try {
+      localStorage.setItem(EXPORT_KEY, JSON.stringify(exportSelection));
+    } catch (e) {
+      /* non-fatal: the selection just won't survive a relaunch */
+    }
   }
 
   function uid() {
@@ -372,53 +415,72 @@
 
   // ---------- export / share ----------
 
-  function buildMarkdown() {
+  function tradesFor(strategy) {
+    return trades
+      .filter((t) => t.strategy === strategy)
+      .sort((a, b) => a.expiration.localeCompare(b.expiration));
+  }
+
+  function spreadRows(rows) {
+    let md = '| Ticker | Type | Strikes | Width | Expiration | DTE | Target Debit |\n';
+    md += '|---|---|---|---|---|---|---|\n';
+    rows.forEach((t) => {
+      const width = Math.abs(t.longStrike - t.shortStrike);
+      const widthStr = Number.isInteger(width) ? width : width.toFixed(1);
+      const typeLabel = t.spreadType === 'call' ? 'Call Spread' : 'Put Spread';
+      md += `| ${t.ticker} | ${typeLabel} | ${fmtStrike(t.longStrike)} / ${fmtStrike(t.shortStrike)} | $${widthStr} | ${formatDate(t.expiration)} | ${computeDTE(t.expiration)} | $${Number(t.targetDebit).toFixed(2)} |\n`;
+    });
+    return md;
+  }
+
+  function singleLegRows(rows) {
+    let md = '| Ticker | Strike | Expiration | DTE | Target Premium |\n';
+    md += '|---|---|---|---|---|\n';
+    rows.forEach((t) => {
+      md += `| ${t.ticker} | ${fmtStrike(t.strike)} | ${formatDate(t.expiration)} | ${computeDTE(t.expiration)} | $${Number(t.targetPremium).toFixed(2)} |\n`;
+    });
+    return md;
+  }
+
+  // `selected` is the list of strategies to include -- only those sections
+  // make it into the exported plan.
+  function buildMarkdown(selected) {
     const exportedOn = new Date().toLocaleDateString('en-US', {
       weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
     });
 
+    const included = STRATEGY_ORDER.filter((s) => selected.includes(s));
+
     let md = `# Session Plan\n_Exported ${exportedOn}_\n`;
 
-    if (trades.length === 0) {
+    // Say what the plan covers whenever it isn't the whole book, so a
+    // partial export can't be mistaken for everything queued.
+    if (included.length && included.length < STRATEGY_ORDER.length) {
+      md += `_${included.map((s) => STRATEGIES[s].heading).join(' · ')} only_\n`;
+    }
+
+    const sections = included
+      .map((s) => ({ strategy: s, rows: tradesFor(s) }))
+      .filter((sec) => sec.rows.length);
+
+    if (!sections.length) {
       return md + '\nNo trade ideas queued.\n';
     }
 
-    const byStrategy = (s) => trades.filter((t) => t.strategy === s).sort((a, b) => a.expiration.localeCompare(b.expiration));
-    const ds = byStrategy('debit_spread');
-    const csp = byStrategy('csp');
-    const cc = byStrategy('cc');
-
-    if (ds.length) {
-      md += '\n## Debit Spreads\n\n';
-      md += '| Ticker | Type | Strikes | Width | Expiration | DTE | Target Debit |\n';
-      md += '|---|---|---|---|---|---|---|\n';
-      ds.forEach((t) => {
-        const width = Math.abs(t.longStrike - t.shortStrike);
-        const widthStr = Number.isInteger(width) ? width : width.toFixed(1);
-        const typeLabel = t.spreadType === 'call' ? 'Call Spread' : 'Put Spread';
-        md += `| ${t.ticker} | ${typeLabel} | ${fmtStrike(t.longStrike)} / ${fmtStrike(t.shortStrike)} | $${widthStr} | ${formatDate(t.expiration)} | ${computeDTE(t.expiration)} | $${Number(t.targetDebit).toFixed(2)} |\n`;
-      });
-    }
-
-    if (csp.length) {
-      md += '\n## Cash Secured Puts\n\n';
-      md += '| Ticker | Strike | Expiration | DTE | Target Premium |\n';
-      md += '|---|---|---|---|---|\n';
-      csp.forEach((t) => {
-        md += `| ${t.ticker} | ${fmtStrike(t.strike)} | ${formatDate(t.expiration)} | ${computeDTE(t.expiration)} | $${Number(t.targetPremium).toFixed(2)} |\n`;
-      });
-    }
-
-    if (cc.length) {
-      md += '\n## Covered Calls\n\n';
-      md += '| Ticker | Strike | Expiration | DTE | Target Premium |\n';
-      md += '|---|---|---|---|---|\n';
-      cc.forEach((t) => {
-        md += `| ${t.ticker} | ${fmtStrike(t.strike)} | ${formatDate(t.expiration)} | ${computeDTE(t.expiration)} | $${Number(t.targetPremium).toFixed(2)} |\n`;
-      });
-    }
+    sections.forEach((sec) => {
+      md += `\n## ${STRATEGIES[sec.strategy].heading}\n\n`;
+      md += sec.strategy === 'debit_spread' ? spreadRows(sec.rows) : singleLegRows(sec.rows);
+    });
 
     return md;
+  }
+
+  function exportFilename(selected) {
+    const date = new Date().toISOString().slice(0, 10);
+    // One strategy picked -> name the file after it, so a folder of exports
+    // stays readable.
+    const slug = selected.length === 1 ? STRATEGIES[selected[0]].slug + '-' : '';
+    return `session-plan-${slug}${date}.md`;
   }
 
   let toastTimer = null;
@@ -429,18 +491,86 @@
     toastTimer = setTimeout(() => { toast.hidden = true; }, 2200);
   }
 
-  async function handleShare() {
-    const markdown = buildMarkdown();
-    const filename = `session-plan-${new Date().toISOString().slice(0, 10)}.md`;
+  // ---------- export sheet ----------
+
+  function openExport() {
+    syncExportUI();
+    overlay.classList.add('open');
+    exportSheet.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeExport() {
+    overlay.classList.remove('open');
+    exportSheet.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  // Strategies that are both ticked and actually have ideas queued.
+  function effectiveSelection() {
+    return STRATEGY_ORDER.filter((s) => exportSelection.includes(s) && tradesFor(s).length);
+  }
+
+  function syncExportUI() {
+    exportRows.forEach((row) => {
+      const strategy = row.getAttribute('data-strategy');
+      const count = tradesFor(strategy).length;
+      const selected = exportSelection.includes(strategy);
+
+      row.querySelector('[data-count-for]').textContent = count;
+      row.classList.toggle('selected', selected && count > 0);
+      row.setAttribute('aria-pressed', String(selected && count > 0));
+      // Nothing queued for it -- there is nothing to tick.
+      row.disabled = count === 0;
+    });
+
+    const count = effectiveSelection().reduce((n, s) => n + tradesFor(s).length, 0);
+    exportConfirmBtn.disabled = count === 0;
+    exportConfirmBtn.textContent = count === 0
+      ? 'Nothing to Export'
+      : `Export ${count} Idea${count === 1 ? '' : 's'}`;
+
+    const anyQueued = trades.length > 0;
+    exportSelectAll.disabled = !anyQueued;
+    exportSelectNone.disabled = count === 0;
+  }
+
+  function toggleExportStrategy(strategy) {
+    if (exportSelection.includes(strategy)) {
+      exportSelection = exportSelection.filter((s) => s !== strategy);
+    } else {
+      exportSelection = [...exportSelection, strategy];
+    }
+    persistExportSelection();
+    syncExportUI();
+  }
+
+  function setExportSelection(next) {
+    exportSelection = next;
+    persistExportSelection();
+    syncExportUI();
+  }
+
+  async function handleExport() {
+    const selected = effectiveSelection();
+    if (!selected.length) return;
+
+    const markdown = buildMarkdown(selected);
+    const filename = exportFilename(selected);
+    const title = selected.length === 1
+      ? `Session Plan · ${STRATEGIES[selected[0]].heading}`
+      : 'Session Plan';
+
+    closeExport();
 
     if (navigator.share) {
       try {
         const file = new File([markdown], filename, { type: 'text/markdown' });
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file], title: 'Session Plan' });
+          await navigator.share({ files: [file], title });
           return;
         }
-        await navigator.share({ title: 'Session Plan', text: markdown });
+        await navigator.share({ title, text: markdown });
         return;
       } catch (e) {
         if (e && e.name === 'AbortError') return; // user dismissed the share sheet
@@ -460,7 +590,7 @@
 
   document.getElementById('addBtn').addEventListener('click', () => openForm(null));
   document.getElementById('closeBtn').addEventListener('click', closeForm);
-  overlay.addEventListener('click', closeForm);
+  overlay.addEventListener('click', () => { closeForm(); closeExport(); });
 
   segStratDS.addEventListener('click', () => setStrategy('debit_spread'));
   segStratCSP.addEventListener('click', () => setStrategy('csp'));
@@ -473,7 +603,15 @@
   expirationInput.addEventListener('change', updateDteHint);
   tradeForm.addEventListener('submit', handleSubmit);
   deleteBtn.addEventListener('click', handleDelete);
-  shareBtn.addEventListener('click', handleShare);
+  shareBtn.addEventListener('click', openExport);
+
+  document.getElementById('exportCloseBtn').addEventListener('click', closeExport);
+  exportRows.forEach((row) => {
+    row.addEventListener('click', () => toggleExportStrategy(row.getAttribute('data-strategy')));
+  });
+  exportSelectAll.addEventListener('click', () => setExportSelection([...STRATEGY_ORDER]));
+  exportSelectNone.addEventListener('click', () => setExportSelection([]));
+  exportConfirmBtn.addEventListener('click', handleExport);
 
   render();
 

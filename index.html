@@ -30,7 +30,7 @@
       <div class="subtitle" id="subtitleDate">Debit Spreads</div>
     </div>
     <div class="count-badge" id="countBadge">0 QUEUED</div>
-    <button id="shareBtn" class="icon-btn" aria-label="Share as Markdown">
+    <button id="shareBtn" class="icon-btn" aria-label="Export session plan">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 3v12"></path>
         <path d="M8 7l4-4 4 4"></path>
@@ -133,6 +133,62 @@
         </div>
       </div>
     </form>
+  </div>
+
+  <!-- Export sheet -->
+  <div id="exportSheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="exportTitle">
+    <div class="sheet-header">
+      <div class="title" id="exportTitle">Export Session Plan</div>
+      <button id="exportCloseBtn" class="icon-btn" style="width:36px;height:36px;border-radius:9px;color:var(--muted);" aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <line x1="5" y1="5" x2="19" y2="19"></line>
+          <line x1="19" y1="5" x2="5" y2="19"></line>
+        </svg>
+      </button>
+    </div>
+
+    <div class="sheet-body">
+      <div class="field">
+        <div class="field-label">Include Strategies</div>
+        <div class="export-list" id="exportList">
+          <button type="button" class="export-row ds" data-strategy="debit_spread" aria-pressed="true">
+            <span class="export-check" aria-hidden="true">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 12.5 L9.5 18 L20 6.5"></path>
+              </svg>
+            </span>
+            <span class="export-row-label">Debit Spreads</span>
+            <span class="export-row-count" data-count-for="debit_spread">0</span>
+          </button>
+          <button type="button" class="export-row csp" data-strategy="csp" aria-pressed="true">
+            <span class="export-check" aria-hidden="true">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 12.5 L9.5 18 L20 6.5"></path>
+              </svg>
+            </span>
+            <span class="export-row-label">Cash Secured Puts</span>
+            <span class="export-row-count" data-count-for="csp">0</span>
+          </button>
+          <button type="button" class="export-row cc" data-strategy="cc" aria-pressed="true">
+            <span class="export-check" aria-hidden="true">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 12.5 L9.5 18 L20 6.5"></path>
+              </svg>
+            </span>
+            <span class="export-row-label">Covered Calls</span>
+            <span class="export-row-count" data-count-for="cc">0</span>
+          </button>
+        </div>
+        <div class="export-actions">
+          <button type="button" class="link-btn" id="exportSelectAll">Select all</button>
+          <button type="button" class="link-btn" id="exportSelectNone">Clear</button>
+        </div>
+      </div>
+
+      <div class="sheet-footer">
+        <button type="button" class="btn btn-save" id="exportConfirmBtn">Export</button>
+      </div>
+    </div>
   </div>
 
   <div id="toast" class="toast" hidden></div>
