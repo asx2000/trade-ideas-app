@@ -23,6 +23,8 @@
   };
 
   const list = document.getElementById('list');
+  const listToolbar = document.getElementById('listToolbar');
+  const clearAllBtn = document.getElementById('clearAllBtn');
   const emptyState = document.getElementById('emptyState');
   const countBadge = document.getElementById('countBadge');
   const subtitleDate = document.getElementById('subtitleDate');
@@ -145,6 +147,30 @@
     });
   }
 
+  // Missing expirations sort to the end, newest-info-first ordering.
+  function byExpiration(a, b) {
+    if (!a.expiration && !b.expiration) return 0;
+    if (!a.expiration) return 1;
+    if (!b.expiration) return -1;
+    return a.expiration.localeCompare(b.expiration);
+  }
+
+  // ---------- optional-field formatting ----------
+
+  function fmtStrike(n) {
+    return (n === null || n === undefined || n === '' || isNaN(n)) ? '—' : String(n);
+  }
+
+  function fmtMoney(n) {
+    return (n === null || n === undefined || n === '' || isNaN(n)) ? '—' : '$' + Number(n).toFixed(2);
+  }
+
+  function fmtWidth(l, s) {
+    if (l === null || l === undefined || s === null || s === undefined || isNaN(l) || isNaN(s)) return null;
+    const w = Math.abs(l - s);
+    return '$' + (Number.isInteger(w) ? w : w.toFixed(1));
+  }
+
   // ---------- rendering ----------
 
   function render() {
@@ -152,6 +178,7 @@
       'Debit Spreads · Wheel · ' + new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 
     countBadge.textContent = trades.length + ' QUEUED';
+    listToolbar.hidden = trades.length === 0;
 
     if (trades.length === 0) {
       list.hidden = true;
@@ -163,7 +190,7 @@
     emptyState.hidden = true;
     list.hidden = false;
 
-    const sorted = [...trades].sort((a, b) => a.expiration.localeCompare(b.expiration));
+    const sorted = [...trades].sort(byExpiration);
 
     list.innerHTML = sorted.map(cardHTML).join('');
 
@@ -173,11 +200,13 @@
   }
 
   function cardHTML(t) {
-    const dte = computeDTE(t.expiration);
-    const expired = dte < 0;
-    const bottomLabel = expired
-      ? 'Expired ' + formatDate(t.expiration)
-      : 'Exp ' + formatDate(t.expiration) + ' · ' + dte + ' DTE';
+    const dte = t.expiration ? computeDTE(t.expiration) : null;
+    const expired = dte !== null && dte < 0;
+    const bottomLabel = !t.expiration
+      ? 'No expiration set'
+      : expired
+        ? 'Expired ' + formatDate(t.expiration)
+        : 'Exp ' + formatDate(t.expiration) + ' · ' + dte + ' DTE';
 
     let pillClass, pillLabel, midHTML, premiumLabelText;
 
@@ -192,22 +221,21 @@
         </div>
         <div class="col-right">
           <div class="field-label">${premiumLabelText}</div>
-          <div class="card-value premium">$${Number(t.targetPremium).toFixed(2)}</div>
+          <div class="card-value premium">${fmtMoney(t.targetPremium)}</div>
         </div>
       `;
     } else {
-      const width = Math.abs(t.longStrike - t.shortStrike);
-      const widthStr = Number.isInteger(width) ? width : width.toFixed(1);
+      const widthStr = fmtWidth(t.longStrike, t.shortStrike);
       pillClass = t.spreadType === 'call' ? 'call' : 'put';
       pillLabel = t.spreadType === 'call' ? 'CALL SPREAD' : 'PUT SPREAD';
       midHTML = `
         <div class="col-left">
           <div class="field-label">Strikes</div>
-          <div class="card-value">${fmtStrike(t.longStrike)} / ${fmtStrike(t.shortStrike)} <span class="dim">· $${widthStr} wide</span></div>
+          <div class="card-value">${fmtStrike(t.longStrike)} / ${fmtStrike(t.shortStrike)}${widthStr ? ` <span class="dim">· ${widthStr} wide</span>` : ''}</div>
         </div>
         <div class="col-right">
           <div class="field-label">Target Debit</div>
-          <div class="card-value premium">$${Number(t.targetDebit).toFixed(2)}</div>
+          <div class="card-value premium">${fmtMoney(t.targetDebit)}</div>
         </div>
       `;
     }
@@ -222,10 +250,6 @@
         <div class="card-bottom${expired ? ' expired' : ''}">${bottomLabel}</div>
       </div>
     `;
-  }
-
-  function fmtStrike(n) {
-    return String(n);
   }
 
   function escapeHTML(s) {
@@ -252,12 +276,13 @@
     singleStrikeField.hidden = isSpread;
 
     if (strategy === 'csp') {
-      singleStrikeLabel.textContent = 'Strike (Put)';
+      singleStrikeLabel.innerHTML = 'Strike (Put) <span class="optional-tag">(Optional)</span>';
     } else if (strategy === 'cc') {
-      singleStrikeLabel.textContent = 'Strike (Call)';
+      singleStrikeLabel.innerHTML = 'Strike (Call) <span class="optional-tag">(Optional)</span>';
     }
 
-    premiumLabel.textContent = isSpread ? 'Ideal Premium (Debit)' : 'Target Premium (Credit)';
+    premiumLabel.innerHTML = (isSpread ? 'Ideal Premium (Debit)' : 'Target Premium (Credit)') +
+      ' <span class="optional-tag">(Optional)</span>';
 
     updateSaveButtonStyle();
   }
@@ -309,18 +334,18 @@
       editingId = id;
       sheetTitle.textContent = 'Edit Trade Idea';
       tickerInput.value = t.ticker;
-      expirationInput.value = t.expiration;
+      expirationInput.value = t.expiration || '';
 
       setStrategy(t.strategy);
 
       if (t.strategy === 'debit_spread') {
-        longStrikeInput.value = t.longStrike;
-        shortStrikeInput.value = t.shortStrike;
-        premiumInput.value = t.targetDebit;
+        longStrikeInput.value = t.longStrike ?? '';
+        shortStrikeInput.value = t.shortStrike ?? '';
+        premiumInput.value = t.targetDebit ?? '';
         setType(t.spreadType);
       } else {
-        strikeInput.value = t.strike;
-        premiumInput.value = t.targetPremium;
+        strikeInput.value = t.strike ?? '';
+        premiumInput.value = t.targetPremium ?? '';
       }
 
       deleteBtn.hidden = false;
@@ -354,13 +379,16 @@
     formError.textContent = '';
 
     const ticker = tickerInput.value.trim().toUpperCase();
-    const expiration = expirationInput.value;
-    const premium = parseFloat(premiumInput.value);
-
     if (!ticker) return showError('Enter a ticker.');
-    if (!expiration) return showError('Pick an expiration date.');
-    if (isNaN(premium) || premium <= 0) {
-      return showError(currentStrategy === 'debit_spread' ? 'Enter a target debit above 0.' : 'Enter a target premium above 0.');
+
+    // Everything below is optional -- an empty field is stored as null
+    // rather than blocking save, so a queued idea can be fleshed out later.
+    const expiration = expirationInput.value || null;
+
+    const premiumRaw = premiumInput.value;
+    const premium = premiumRaw === '' ? null : parseFloat(premiumRaw);
+    if (premium !== null && (isNaN(premium) || premium <= 0)) {
+      return showError(currentStrategy === 'debit_spread' ? 'Target debit must be above 0.' : 'Target premium must be above 0.');
     }
 
     let trade = {
@@ -374,17 +402,23 @@
     };
 
     if (currentStrategy === 'debit_spread') {
-      const longStrike = parseFloat(longStrikeInput.value);
-      const shortStrike = parseFloat(shortStrikeInput.value);
-      if (isNaN(longStrike) || isNaN(shortStrike)) return showError('Enter both strikes.');
-      if (longStrike === shortStrike) return showError('Long and short strikes must differ.');
+      const longRaw = longStrikeInput.value;
+      const shortRaw = shortStrikeInput.value;
+      const longStrike = longRaw === '' ? null : parseFloat(longRaw);
+      const shortStrike = shortRaw === '' ? null : parseFloat(shortRaw);
+      if (longRaw !== '' && isNaN(longStrike)) return showError('Enter a valid long strike.');
+      if (shortRaw !== '' && isNaN(shortStrike)) return showError('Enter a valid short strike.');
+      if (longStrike !== null && shortStrike !== null && longStrike === shortStrike) {
+        return showError('Long and short strikes must differ.');
+      }
       trade.spreadType = currentType;
       trade.longStrike = longStrike;
       trade.shortStrike = shortStrike;
       trade.targetDebit = premium;
     } else {
-      const strike = parseFloat(strikeInput.value);
-      if (isNaN(strike)) return showError('Enter a strike.');
+      const strikeRaw = strikeInput.value;
+      const strike = strikeRaw === '' ? null : parseFloat(strikeRaw);
+      if (strikeRaw !== '' && isNaN(strike)) return showError('Enter a valid strike.');
       trade.strike = strike;
       trade.targetPremium = premium;
     }
@@ -413,22 +447,32 @@
     closeForm();
   }
 
+  function handleClearAll() {
+    if (!trades.length) return;
+    const count = trades.length;
+    if (!confirm(`Clear all ${count} trade idea${count === 1 ? '' : 's'}? This can't be undone.`)) return;
+    trades = [];
+    persist();
+    render();
+  }
+
   // ---------- export / share ----------
 
   function tradesFor(strategy) {
     return trades
       .filter((t) => t.strategy === strategy)
-      .sort((a, b) => a.expiration.localeCompare(b.expiration));
+      .sort(byExpiration);
   }
 
   function spreadRows(rows) {
     let md = '| Ticker | Type | Strikes | Width | Expiration | DTE | Target Debit |\n';
     md += '|---|---|---|---|---|---|---|\n';
     rows.forEach((t) => {
-      const width = Math.abs(t.longStrike - t.shortStrike);
-      const widthStr = Number.isInteger(width) ? width : width.toFixed(1);
+      const widthStr = fmtWidth(t.longStrike, t.shortStrike) || '—';
       const typeLabel = t.spreadType === 'call' ? 'Call Spread' : 'Put Spread';
-      md += `| ${t.ticker} | ${typeLabel} | ${fmtStrike(t.longStrike)} / ${fmtStrike(t.shortStrike)} | $${widthStr} | ${formatDate(t.expiration)} | ${computeDTE(t.expiration)} | $${Number(t.targetDebit).toFixed(2)} |\n`;
+      const expStr = t.expiration ? formatDate(t.expiration) : '—';
+      const dteStr = t.expiration ? computeDTE(t.expiration) : '—';
+      md += `| ${t.ticker} | ${typeLabel} | ${fmtStrike(t.longStrike)} / ${fmtStrike(t.shortStrike)} | ${widthStr} | ${expStr} | ${dteStr} | ${fmtMoney(t.targetDebit)} |\n`;
     });
     return md;
   }
@@ -437,7 +481,9 @@
     let md = '| Ticker | Strike | Expiration | DTE | Target Premium |\n';
     md += '|---|---|---|---|---|\n';
     rows.forEach((t) => {
-      md += `| ${t.ticker} | ${fmtStrike(t.strike)} | ${formatDate(t.expiration)} | ${computeDTE(t.expiration)} | $${Number(t.targetPremium).toFixed(2)} |\n`;
+      const expStr = t.expiration ? formatDate(t.expiration) : '—';
+      const dteStr = t.expiration ? computeDTE(t.expiration) : '—';
+      md += `| ${t.ticker} | ${fmtStrike(t.strike)} | ${expStr} | ${dteStr} | ${fmtMoney(t.targetPremium)} |\n`;
     });
     return md;
   }
@@ -604,6 +650,7 @@
   tradeForm.addEventListener('submit', handleSubmit);
   deleteBtn.addEventListener('click', handleDelete);
   shareBtn.addEventListener('click', openExport);
+  clearAllBtn.addEventListener('click', handleClearAll);
 
   document.getElementById('exportCloseBtn').addEventListener('click', closeExport);
   exportRows.forEach((row) => {
