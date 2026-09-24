@@ -40,6 +40,9 @@
   </div>
 
   <!-- List / empty state -->
+  <div class="list-toolbar" id="listToolbar" hidden>
+    <button type="button" class="link-btn danger" id="clearAllBtn">Clear All</button>
+  </div>
   <div class="list" id="list" hidden></div>
 
   <div class="empty-state" id="emptyState">
@@ -90,7 +93,7 @@
         </div>
 
         <div class="field">
-          <div class="field-label">Expiration</div>
+          <div class="field-label">Expiration <span class="optional-tag">(Optional)</span></div>
           <div class="input" style="display:flex; align-items:center; justify-content:space-between; padding-right: 10px;">
             <input id="expiration" type="date" style="border:none; background:transparent; color:var(--text); font-size:16px; padding:0; width: 100%;">
             <span id="dteHint" style="color:var(--muted); font-size:13px; white-space:nowrap; padding-left:8px;"></span>
@@ -98,7 +101,7 @@
         </div>
 
         <div class="field" id="dsStrikesField">
-          <div class="field-label">Strikes</div>
+          <div class="field-label">Strikes <span class="optional-tag">(Optional)</span></div>
           <div class="strike-row">
             <div class="strike-col">
               <div class="sub-label">Long Strike</div>

@@ -100,6 +100,13 @@ button, input {
 
 /* ---------- List ---------- */
 
+.list-toolbar {
+  flex-shrink: 0;
+  padding: 10px 16px 0;
+  display: flex;
+  justify-content: flex-end;
+}
+
 .list {
   flex-grow: 1;
   overflow-y: auto;
@@ -406,6 +413,9 @@ button, input {
   cursor: pointer;
 }
 .link-btn:disabled { color: var(--muted); cursor: default; }
+.link-btn.danger { color: var(--red); }
+
+.optional-tag { color: var(--muted); font-weight: 400; text-transform: none; letter-spacing: 0; }
 
 .btn-save:disabled { background: var(--surface2); color: var(--muted); cursor: default; }
 
