@@ -83,8 +83,8 @@ button, input {
   flex-grow: 1;
   min-width: 0;
 }
-.header-titles .title { font-size: 17px; font-weight: 700; letter-spacing: -0.2px; }
-.header-titles .subtitle { font-size: 12px; color: var(--muted); }
+.header-titles .title { font-size: 17px; font-weight: 700; letter-spacing: -0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.header-titles .subtitle { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .count-badge {
   font-size: 11px;
@@ -336,6 +336,22 @@ button, input {
 .btn-save.csp { background: var(--teal); color: #04211f; }
 .btn-save.cc { background: var(--purple); color: #221238; }
 .btn-delete { background: transparent; color: var(--red); border: 1px solid var(--red-dim); }
+
+/* ---------- Settings sheet ---------- */
+
+.settings-hint {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.btn-clear-cache {
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  margin-top: 4px;
+}
+.btn-clear-cache:active { background: var(--border); }
 
 .error-text {
   font-size: 12px;
