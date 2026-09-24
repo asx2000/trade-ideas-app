@@ -71,6 +71,11 @@
   const exportSelectAll = document.getElementById('exportSelectAll');
   const exportSelectNone = document.getElementById('exportSelectNone');
 
+  const settingsBtn = document.getElementById('settingsBtn');
+  const settingsSheet = document.getElementById('settingsSheet');
+  const settingsCloseBtn = document.getElementById('settingsCloseBtn');
+  const clearCacheBtn = document.getElementById('clearCacheBtn');
+
   let trades = load();
   let exportSelection = loadExportSelection();
   let editingId = null;
@@ -632,11 +637,51 @@
     }
   }
 
+  // ---------- settings sheet ----------
+
+  function openSettings() {
+    overlay.classList.add('open');
+    settingsSheet.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeSettings() {
+    overlay.classList.remove('open');
+    settingsSheet.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  // Drops the service worker's cached assets and unregisters it so the next
+  // load fetches everything fresh, then reloads. Trade ideas live in
+  // localStorage, which this never touches, so nothing queued is lost.
+  async function handleClearCache() {
+    clearCacheBtn.disabled = true;
+    clearCacheBtn.textContent = 'Clearing…';
+
+    try {
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      }
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.unregister()));
+      }
+    } catch (e) {
+      /* best effort -- reload anyway so the browser re-fetches assets */
+    }
+
+    window.location.reload();
+  }
+
   // ---------- wire up ----------
 
   document.getElementById('addBtn').addEventListener('click', () => openForm(null));
   document.getElementById('closeBtn').addEventListener('click', closeForm);
-  overlay.addEventListener('click', () => { closeForm(); closeExport(); });
+  overlay.addEventListener('click', () => { closeForm(); closeExport(); closeSettings(); });
+  settingsBtn.addEventListener('click', openSettings);
+  settingsCloseBtn.addEventListener('click', closeSettings);
+  clearCacheBtn.addEventListener('click', handleClearCache);
 
   segStratDS.addEventListener('click', () => setStrategy('debit_spread'));
   segStratCSP.addEventListener('click', () => setStrategy('csp'));
