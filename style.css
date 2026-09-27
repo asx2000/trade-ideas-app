@@ -14,6 +14,8 @@
   --purple-dim: #3b2467;
   --teal: #39d0d8;
   --teal-dim: #114a4d;
+  --amber: #e3b341;
+  --amber-dim: #4a3a10;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
@@ -149,6 +151,8 @@ button, input {
 .pill.put { color: var(--red); background: var(--red-dim); }
 .pill.csp { color: var(--teal); background: var(--teal-dim); }
 .pill.cc { color: var(--purple); background: var(--purple-dim); }
+.pill.leaps { color: var(--amber); background: var(--amber-dim); }
+.pill.stock { color: var(--blue); background: rgba(88, 166, 255, 0.14); }
 
 .card-mid {
   display: flex;
@@ -281,6 +285,7 @@ button, input {
 .input.debit-input { font-size: 18px; font-weight: 700; color: var(--blue); }
 
 .segmented { display: flex; gap: 8px; }
+.segmented-row2 { margin-top: 8px; }
 .segment {
   flex-grow: 1;
   min-width: 0;
@@ -299,6 +304,8 @@ button, input {
 .segment.active.ds { background: var(--surface); border-color: var(--blue); color: var(--blue); font-weight: 700; }
 .segment.active.csp { background: var(--teal-dim); border-color: var(--teal); color: var(--teal); font-weight: 700; }
 .segment.active.cc { background: var(--purple-dim); border-color: var(--purple); color: var(--purple); font-weight: 700; }
+.segment.active.leaps { background: var(--amber-dim); border-color: var(--amber); color: var(--amber); font-weight: 700; }
+.segment.active.stock { background: var(--surface); border-color: var(--blue); color: var(--blue); font-weight: 700; }
 
 .strike-row { display: flex; gap: 10px; }
 .strike-col { flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
@@ -335,6 +342,8 @@ button, input {
 .btn-save.put { background: var(--red); color: #2b0705; }
 .btn-save.csp { background: var(--teal); color: #04211f; }
 .btn-save.cc { background: var(--purple); color: #221238; }
+.btn-save.leaps { background: var(--amber); color: #2b2005; }
+.btn-save.stock { background: var(--blue); color: #06213f; }
 .btn-delete { background: transparent; color: var(--red); border: 1px solid var(--red-dim); }
 
 /* ---------- Settings sheet ---------- */
@@ -414,6 +423,10 @@ button, input {
 .export-row.selected.csp .export-check { border-color: var(--teal); color: var(--teal); }
 .export-row.selected.cc { border-color: var(--purple); background: var(--purple-dim); }
 .export-row.selected.cc .export-check { border-color: var(--purple); color: var(--purple); }
+.export-row.selected.leaps { border-color: var(--amber); background: var(--amber-dim); }
+.export-row.selected.leaps .export-check { border-color: var(--amber); color: var(--amber); }
+.export-row.selected.stock { border-color: var(--blue); background: var(--surface); }
+.export-row.selected.stock .export-check { border-color: var(--blue); color: var(--blue); }
 
 .export-row:disabled { opacity: 0.4; cursor: default; }
 
