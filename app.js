@@ -5,7 +5,11 @@
   const EXPORT_KEY = 'tradeIdeas.exportStrategies.v1';
 
   // Order the export sheet rows / markdown sections follow.
-  const STRATEGY_ORDER = ['debit_spread', 'csp', 'cc'];
+  const STRATEGY_ORDER = ['debit_spread', 'csp', 'cc', 'leaps', 'stock'];
+
+  // Strategies whose form only needs a ticker plus an optional strike/premium
+  // (no spread type, no strikes pair).
+  const SINGLE_LEG_STRATEGIES = ['csp', 'cc', 'leaps'];
 
   const STRATEGIES = {
     debit_spread: {
@@ -19,6 +23,14 @@
     cc: {
       label: 'Covered Call', pillClass: 'cc', pillText: 'COVERED CALL',
       heading: 'Covered Calls', slug: 'covered-calls',
+    },
+    leaps: {
+      label: 'LEAPS Call', pillClass: 'leaps', pillText: 'LEAPS CALL',
+      heading: 'LEAPS Calls', slug: 'leaps-calls',
+    },
+    stock: {
+      label: 'Stock', pillClass: 'stock', pillText: 'STOCK',
+      heading: 'Stocks', slug: 'stocks',
     },
   };
 
@@ -40,10 +52,13 @@
   const segStratDS = document.getElementById('segStratDS');
   const segStratCSP = document.getElementById('segStratCSP');
   const segStratCC = document.getElementById('segStratCC');
+  const segStratLEAPS = document.getElementById('segStratLEAPS');
+  const segStratStock = document.getElementById('segStratStock');
   const dsTypeField = document.getElementById('dsTypeField');
   const segCall = document.getElementById('segCall');
   const segPut = document.getElementById('segPut');
 
+  const expirationField = document.getElementById('expirationField');
   const expirationInput = document.getElementById('expiration');
   const dteHint = document.getElementById('dteHint');
 
@@ -207,18 +222,20 @@
   function cardHTML(t) {
     const dte = t.expiration ? computeDTE(t.expiration) : null;
     const expired = dte !== null && dte < 0;
-    const bottomLabel = !t.expiration
-      ? 'No expiration set'
-      : expired
-        ? 'Expired ' + formatDate(t.expiration)
-        : 'Exp ' + formatDate(t.expiration) + ' · ' + dte + ' DTE';
+    const bottomLabel = t.strategy === 'stock'
+      ? 'Stock position'
+      : !t.expiration
+        ? 'No expiration set'
+        : expired
+          ? 'Expired ' + formatDate(t.expiration)
+          : 'Exp ' + formatDate(t.expiration) + ' · ' + dte + ' DTE';
 
     let pillClass, pillLabel, midHTML, premiumLabelText;
 
-    if (t.strategy === 'csp' || t.strategy === 'cc') {
+    if (SINGLE_LEG_STRATEGIES.includes(t.strategy)) {
       pillClass = STRATEGIES[t.strategy].pillClass;
       pillLabel = STRATEGIES[t.strategy].pillText;
-      premiumLabelText = 'Target Premium';
+      premiumLabelText = t.strategy === 'leaps' ? 'Target Debit' : 'Target Premium';
       midHTML = `
         <div class="col-left">
           <div class="field-label">Strike</div>
@@ -227,6 +244,15 @@
         <div class="col-right">
           <div class="field-label">${premiumLabelText}</div>
           <div class="card-value premium">${fmtMoney(t.targetPremium)}</div>
+        </div>
+      `;
+    } else if (t.strategy === 'stock') {
+      pillClass = STRATEGIES.stock.pillClass;
+      pillLabel = STRATEGIES.stock.pillText;
+      midHTML = `
+        <div class="col-left">
+          <div class="field-label">Target Entry Price</div>
+          <div class="card-value premium">${fmtMoney(t.targetPrice)}</div>
         </div>
       `;
     } else {
@@ -274,26 +300,36 @@
     segStratDS.classList.toggle('active', strategy === 'debit_spread');
     segStratCSP.classList.toggle('active', strategy === 'csp');
     segStratCC.classList.toggle('active', strategy === 'cc');
+    segStratLEAPS.classList.toggle('active', strategy === 'leaps');
+    segStratStock.classList.toggle('active', strategy === 'stock');
 
     const isSpread = strategy === 'debit_spread';
+    const isStock = strategy === 'stock';
+    const showSingleStrike = SINGLE_LEG_STRATEGIES.includes(strategy);
+
     dsTypeField.hidden = !isSpread;
     dsStrikesField.hidden = !isSpread;
-    singleStrikeField.hidden = isSpread;
+    singleStrikeField.hidden = !showSingleStrike;
+    expirationField.hidden = isStock;
 
     if (strategy === 'csp') {
       singleStrikeLabel.innerHTML = 'Strike (Put) <span class="optional-tag">(Optional)</span>';
-    } else if (strategy === 'cc') {
+    } else if (strategy === 'cc' || strategy === 'leaps') {
       singleStrikeLabel.innerHTML = 'Strike (Call) <span class="optional-tag">(Optional)</span>';
     }
 
-    premiumLabel.innerHTML = (isSpread ? 'Ideal Premium (Debit)' : 'Target Premium (Credit)') +
-      ' <span class="optional-tag">(Optional)</span>';
+    if (isStock) {
+      premiumLabel.innerHTML = 'Target Entry Price <span class="optional-tag">(Optional)</span>';
+    } else {
+      premiumLabel.innerHTML = (isSpread || strategy === 'leaps' ? 'Ideal Premium (Debit)' : 'Target Premium (Credit)') +
+        ' <span class="optional-tag">(Optional)</span>';
+    }
 
     updateSaveButtonStyle();
   }
 
   function updateSaveButtonStyle() {
-    saveBtn.classList.remove('put', 'csp', 'cc');
+    saveBtn.classList.remove('put', 'csp', 'cc', 'leaps', 'stock');
     if (currentStrategy === 'debit_spread') {
       saveBtn.classList.toggle('put', currentType === 'put');
     } else {
@@ -348,6 +384,8 @@
         shortStrikeInput.value = t.shortStrike ?? '';
         premiumInput.value = t.targetDebit ?? '';
         setType(t.spreadType);
+      } else if (t.strategy === 'stock') {
+        premiumInput.value = t.targetPrice ?? '';
       } else {
         strikeInput.value = t.strike ?? '';
         premiumInput.value = t.targetPremium ?? '';
@@ -379,6 +417,12 @@
     editingId = null;
   }
 
+  function premiumErrorLabel(strategy) {
+    if (strategy === 'debit_spread' || strategy === 'leaps') return 'Target debit must be above 0.';
+    if (strategy === 'stock') return 'Target entry price must be above 0.';
+    return 'Target premium must be above 0.';
+  }
+
   function handleSubmit(e) {
     e.preventDefault();
     formError.textContent = '';
@@ -388,12 +432,12 @@
 
     // Everything below is optional -- an empty field is stored as null
     // rather than blocking save, so a queued idea can be fleshed out later.
-    const expiration = expirationInput.value || null;
+    const expiration = currentStrategy === 'stock' ? null : (expirationInput.value || null);
 
     const premiumRaw = premiumInput.value;
     const premium = premiumRaw === '' ? null : parseFloat(premiumRaw);
     if (premium !== null && (isNaN(premium) || premium <= 0)) {
-      return showError(currentStrategy === 'debit_spread' ? 'Target debit must be above 0.' : 'Target premium must be above 0.');
+      return showError(premiumErrorLabel(currentStrategy));
     }
 
     let trade = {
@@ -420,6 +464,8 @@
       trade.longStrike = longStrike;
       trade.shortStrike = shortStrike;
       trade.targetDebit = premium;
+    } else if (currentStrategy === 'stock') {
+      trade.targetPrice = premium;
     } else {
       const strikeRaw = strikeInput.value;
       const strike = strikeRaw === '' ? null : parseFloat(strikeRaw);
@@ -493,6 +539,15 @@
     return md;
   }
 
+  function stockRows(rows) {
+    let md = '| Ticker | Target Entry Price |\n';
+    md += '|---|---|\n';
+    rows.forEach((t) => {
+      md += `| ${t.ticker} | ${fmtMoney(t.targetPrice)} |\n`;
+    });
+    return md;
+  }
+
   // `selected` is the list of strategies to include -- only those sections
   // make it into the exported plan.
   function buildMarkdown(selected) {
@@ -520,7 +575,11 @@
 
     sections.forEach((sec) => {
       md += `\n## ${STRATEGIES[sec.strategy].heading}\n\n`;
-      md += sec.strategy === 'debit_spread' ? spreadRows(sec.rows) : singleLegRows(sec.rows);
+      md += sec.strategy === 'debit_spread'
+        ? spreadRows(sec.rows)
+        : sec.strategy === 'stock'
+          ? stockRows(sec.rows)
+          : singleLegRows(sec.rows);
     });
 
     return md;
@@ -686,6 +745,8 @@
   segStratDS.addEventListener('click', () => setStrategy('debit_spread'));
   segStratCSP.addEventListener('click', () => setStrategy('csp'));
   segStratCC.addEventListener('click', () => setStrategy('cc'));
+  segStratLEAPS.addEventListener('click', () => setStrategy('leaps'));
+  segStratStock.addEventListener('click', () => setStrategy('stock'));
 
   segCall.addEventListener('click', () => setType('call'));
   segPut.addEventListener('click', () => setType('put'));

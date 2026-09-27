@@ -83,6 +83,10 @@
             <div class="segment csp" id="segStratCSP" data-strategy="csp">CSP</div>
             <div class="segment cc" id="segStratCC" data-strategy="cc">CC</div>
           </div>
+          <div class="segmented segmented-row2">
+            <div class="segment leaps" id="segStratLEAPS" data-strategy="leaps">LEAPS Call</div>
+            <div class="segment stock" id="segStratStock" data-strategy="stock">Stock</div>
+          </div>
         </div>
 
         <div class="field">
@@ -98,7 +102,7 @@
           </div>
         </div>
 
-        <div class="field">
+        <div class="field" id="expirationField">
           <div class="field-label">Expiration <span class="optional-tag">(Optional)</span></div>
           <div class="input" style="display:flex; align-items:center; justify-content:space-between; padding-right: 10px;">
             <input id="expiration" type="date" style="border:none; background:transparent; color:var(--text); font-size:16px; padding:0; width: 100%;">
@@ -186,6 +190,24 @@
             </span>
             <span class="export-row-label">Covered Calls</span>
             <span class="export-row-count" data-count-for="cc">0</span>
+          </button>
+          <button type="button" class="export-row leaps" data-strategy="leaps" aria-pressed="true">
+            <span class="export-check" aria-hidden="true">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 12.5 L9.5 18 L20 6.5"></path>
+              </svg>
+            </span>
+            <span class="export-row-label">LEAPS Calls</span>
+            <span class="export-row-count" data-count-for="leaps">0</span>
+          </button>
+          <button type="button" class="export-row stock" data-strategy="stock" aria-pressed="true">
+            <span class="export-check" aria-hidden="true">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 12.5 L9.5 18 L20 6.5"></path>
+              </svg>
+            </span>
+            <span class="export-row-label">Stocks</span>
+            <span class="export-row-count" data-count-for="stock">0</span>
           </button>
         </div>
         <div class="export-actions">
